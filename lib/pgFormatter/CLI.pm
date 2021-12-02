@@ -60,17 +60,33 @@ it, and output.
 sub run {
     my $self = shift;
     $self->get_command_line_args();
-    $self->validate_args();
-    $self->logmsg( 'DEBUG', 'Starting to parse SQL file: %s', $self->{ 'cfg' }->{ 'input' } );
-    $self->load_sql();
-    $self->logmsg( 'DEBUG', 'Beautifying' );
-    $self->beautify();
-    if ($self->{'wrap_limit'}) {
-            $self->logmsg( 'DEBUG', 'Wrap query' );
-            $self->wrap_lines($self->{'wrap_comment'});
+
+    my @inputs = @ARGV == 0 ? ('-') : @ARGV;
+
+    if ( @ARGV > 0 && $self->{ 'cfg' }->{ 'inplace' } == 0 )
+    {
+        printf STDERR "Error: Multiple input files can be only used with --inplace\n\n";
+        return;
     }
-    $self->logmsg( 'DEBUG', 'Writing output' );
-    $self->save_output();
+
+    foreach my $input (@inputs)
+    {
+        $self->{ 'cfg' }->{ 'input' } = $input;
+        $self->{ 'cfg' }->{ 'output' } = '-';
+
+        $self->validate_args();
+        $self->logmsg( 'DEBUG', 'Starting to parse SQL file: %s', $self->{ 'cfg' }->{ 'input' } );
+        $self->load_sql();
+        $self->logmsg( 'DEBUG', 'Beautifying' );
+        $self->beautify();
+        if ($self->{'wrap_limit'}) {
+                $self->logmsg( 'DEBUG', 'Wrap query' );
+                $self->wrap_lines($self->{'wrap_comment'});
+        }
+        $self->logmsg( 'DEBUG', 'Writing output' );
+        $self->save_output();
+    }
+
     return;
 }
 
@@ -228,7 +244,7 @@ Options:
     -g | --nogrouping     : add a newline between statements in transaction
                             regroupement. Default is to group statements.
     -h | --help           : show this message and exit.
-    -i | --inplace        : override input file with formatted content.
+    -i | --inplace        : override input files with formatted content.
     -k | --keep-newline   : preserve empty line in plpgsql code.
     -L | --no-extra-line  : do not add an extra empty line at end of the output.
     -m | --maxlength SIZE : maximum length of a query, it will be cutted above
@@ -423,8 +439,6 @@ sub get_command_line_args
         printf 'FATAL: file for extra function list does not exists: %s%s', $cfg{ 'extra-function' } , "\n";
         exit 0;
     }
-
-    $cfg{ 'input' } = $ARGV[ 0 ] // '-';
 
     $self->{ 'cfg' } = \%cfg;
 
