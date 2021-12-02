@@ -26,6 +26,7 @@ use autodie;
 use pgFormatter::Beautify;
 use Getopt::Long qw(:config no_ignore_case bundling);
 use File::Basename;
+use Time::HiRes;
 
 =head1 SYNOPSIS
 
@@ -63,14 +64,21 @@ sub run {
 
     my @inputs = @ARGV == 0 ? ('-') : @ARGV;
 
+    print "EXECUTING";
+    print join(', ', @inputs);
+
     if ( @ARGV > 0 && $self->{ 'cfg' }->{ 'inplace' } == 0 )
     {
         printf STDERR "Error: Multiple input files can be only used with --inplace\n\n";
         return;
     }
 
+    my $index = 0;
+    my $length = @inputs;
     foreach my $input (@inputs)
     {
+        my $start_time = Time::HiRes::gettimeofday();
+
         $self->{ 'cfg' }->{ 'input' } = $input;
         $self->{ 'cfg' }->{ 'output' } = '-';
 
@@ -85,6 +93,10 @@ sub run {
         }
         $self->logmsg( 'DEBUG', 'Writing output' );
         $self->save_output();
+
+        my $stop_time = Time::HiRes::gettimeofday();
+        printf("%i,%.2f,%s\n", $index, $stop_time - $start_time, $input);
+        $index++;
     }
 
     return;
